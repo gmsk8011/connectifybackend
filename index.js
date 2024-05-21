@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const Pusher = require("pusher");
 const url =
   "mongodb+srv://gmsk8011:gmsk8011@cluster0.t2fzzds.mongodb.net/userslist?retryWrites=true&w=majority&appName=Cluster0";
 const { User, Message } = require("./models/data");
@@ -12,6 +13,15 @@ const app = express();
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(cors());
+
+// Pusher configuration
+const pusher = new Pusher({
+  appId: "1804585",
+  key: "5efc00b7acf5bd33ed7d",
+  secret: "0c815601b26111b18e9b",
+  cluster: "ap2",
+  useTLS: true,
+});
 
 // Register endpoint
 app.post("/register", async (req, res) => {
@@ -69,6 +79,13 @@ app.post("/message", async (req, res) => {
     });
 
     const savedMessage = await newMessage.save();
+    // Trigger Pusher event
+    pusher.trigger("messages", "inserted", {
+      sender: savedMessage.sender,
+      receiver: savedMessage.receiver,
+      msg: savedMessage.msg,
+    });
+
     res.status(201).json(savedMessage);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -106,7 +123,7 @@ mongoose
   .then(() => {
     console.log("Connected to DB");
     app.listen(3000, () => {
-      console.log("Server running in 3000");
+      console.log("Server running on port 3000");
     });
   })
   .catch(() => {
